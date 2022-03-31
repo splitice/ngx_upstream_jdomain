@@ -311,8 +311,9 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers, marking associated peers up */
 	f = 0;
 	for (i = 0; i < ctx->naddrs; i++) {
-		if (instance->conf.ipver != 0 && ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && ctx->addrs[i].sockaddr->sa_family != AF_INET) ||
-		                                  (instance->conf.ipver == NGX_JDOMAIN_IPV6 && ctx->addrs[i].sockaddr->sa_family != AF_INET6))) {
+		if (instance->conf.ipver != 0 &&
+		    ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && ctx->addrs[i].sockaddr->sa_family != AF_INET) ||
+		     (instance->conf.ipver == NGX_JDOMAIN_IPV6 && ctx->addrs[i].sockaddr->sa_family != AF_INET6))) {
 			continue;
 		}
 		addr[f].sockaddr = &sockaddr[i].sockaddr;
