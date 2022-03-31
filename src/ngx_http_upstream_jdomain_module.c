@@ -265,7 +265,8 @@ static void
 ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 {
 	ngx_http_upstream_jdomain_instance_t *instance;
-	ngx_uint_t i, f;
+	ngx_uint_t i;
+	ngx_uint_t f;
 	ngx_uint_t exists_alt_server;
 	ngx_uint_t naddrs_prev;
 	ngx_http_upstream_server_t *server;
@@ -310,8 +311,8 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers, marking associated peers up */
 	f = 0;
 	for (i = 0; i < ctx->naddrs; i++) {
-		if (instance->conf.ipver != 0 && ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && addr[i].sockaddr->sa_family != AF_INET) ||
-		                                  (instance->conf.ipver == NGX_JDOMAIN_IPV6 && addr[i].sockaddr->sa_family != AF_INET6))) {
+		if (instance->conf.ipver != 0 && ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && ctx->addrs[i].sockaddr->sa_family != AF_INET) ||
+		                                  (instance->conf.ipver == NGX_JDOMAIN_IPV6 && ctx->addrs[i].sockaddr->sa_family != AF_INET6))) {
 			continue;
 		}
 		addr[f].sockaddr = &sockaddr[i].sockaddr;
@@ -477,7 +478,8 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 	size_t arglen;
 	ngx_int_t num;
 	ngx_url_t u;
-	ngx_uint_t i, f;
+	ngx_uint_t i;
+	ngx_uint_t f;
 	char *rc;
 
 	NGX_JDOMAIN_INVALID_ADDR_SOCKADDR_IN.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -646,8 +648,7 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 			break;
 		}
 	}
-	server->naddrs = f;
-	instance->state.data.naddrs = server->naddrs;
+	instance->state.data.naddrs = server->naddrs = f;
 	/* Copy the sockaddr and address name of the invalid address (0.0.0.0:0) into the remaining buffers */
 	for (i = instance->state.data.naddrs; i < instance->conf.max_ips; i++) {
 		addr[i].name.data = &name[i * NGX_SOCKADDR_STRLEN];
