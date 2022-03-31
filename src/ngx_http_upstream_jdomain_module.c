@@ -628,8 +628,9 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 	sockaddr = instance->state.data.sockaddrs->elts;
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers */
 	for (i = 0; i < u.naddrs; i++) {
-		if (instance->conf.ipver != 0 && ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && u.addrs[i].sockaddr->sa_family != AF_INET) ||
-		                         (instance->conf.ipver == NGX_JDOMAIN_IPV6 && u.addrs[i].sockaddr->sa_family != AF_INET6))) {
+		if (instance->conf.ipver != 0 &&
+		    ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && u.addrs[i].sockaddr->sa_family != AF_INET) ||
+		     (instance->conf.ipver == NGX_JDOMAIN_IPV6 && u.addrs[i].sockaddr->sa_family != AF_INET6))) {
 			continue;
 		}
 		addr[i].name.data = &name[i * NGX_SOCKADDR_STRLEN];
