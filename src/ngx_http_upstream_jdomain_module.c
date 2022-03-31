@@ -156,7 +156,12 @@ ngx_http_upstream_init_jdomain(ngx_conf_t *cf, ngx_http_upstream_srv_conf_t *us)
 		}
 
 		if (j != instance[i].conf.max_ips) {
-			ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "ngx_http_upstream_jdomain_module: num peerps (%d) does not match max_ips (%d)", j, instance[i].conf.max_ips);
+			ngx_conf_log_error(NGX_LOG_EMERG,
+ 			                   cf,
+ 			                   0,
+ 			                   "ngx_http_upstream_jdomain_module: num peerps (%d) does not match max_ips (%d)",
+ 			                   j,
+ 			                   instance[i].conf.max_ips);
 			return NGX_ERROR;
 		}
 
