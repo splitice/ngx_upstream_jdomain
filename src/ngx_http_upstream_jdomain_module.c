@@ -306,12 +306,8 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 	instance->state.data.server->naddrs = 0;
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers, marking associated peers up */
 	for (i = 0; i < ctx->naddrs; i++) {
-		if(	instance->conf.ipver != 0 &&
-			(
-				(instance->conf.ipver == 4 && addr[i].sockaddr->sa_family != AF_INET) ||
-				(instance->conf.ipver == 6 && addr[i].sockaddr->sa_family != AF_INET6)
-			)
-		) {
+		if (instance->conf.ipver != 0 && ((instance->conf.ipver == 4 && addr[i].sockaddr->sa_family != AF_INET) ||
+		                                  (instance->conf.ipver == 6 && addr[i].sockaddr->sa_family != AF_INET6))) {
 			continue;
 		}
 		addr[i].sockaddr = &sockaddr[i].sockaddr;
@@ -324,7 +320,7 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 		peerp[i]->down = 0;
 		instance->state.data.server->down = 0;
 		instance->state.data.server->naddrs++;
-		if(instance->conf.max_ips == instance->state.data.server->naddrs) {
+		if (instance->conf.max_ips == instance->state.data.server->naddrs) {
 			break;
 		}
 	}
@@ -628,7 +624,11 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 	name = instance->state.data.names->elts;
 	sockaddr = instance->state.data.sockaddrs->elts;
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers */
-	for (i = 0; i < ngx_min(u.naddrs, instance->conf.max_ips); i++) {
+	for (i = 0; i < u.naddrs; i++) {
+		if (conf->ipver != 0 && ((conf->ipver == 4 && u.addrs[i].sockaddr->sa_family != AF_INET) ||
+		                         (conf->ipver == 6 && u.addrs[i].sockaddr->sa_family != AF_INET6))) {
+			continue;
+		}
 		addr[i].name.data = &name[i * NGX_SOCKADDR_STRLEN];
 		addr[i].name.len = u.addrs[i].name.len;
 		ngx_memcpy(addr[i].name.data, u.addrs[i].name.data, addr[i].name.len);
@@ -636,6 +636,9 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 		addr[i].socklen = u.addrs[i].socklen;
 		ngx_memcpy(addr[i].sockaddr, u.addrs[i].sockaddr, addr[i].socklen);
 		server->naddrs++;
+		if (conf->max_ips == server->naddrs) {
+			break;
+		}
 	}
 	instance->state.data.naddrs = server->naddrs;
 	/* Copy the sockaddr and address name of the invalid address (0.0.0.0:0) into the remaining buffers */
