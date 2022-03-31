@@ -265,7 +265,7 @@ static void
 ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 {
 	ngx_http_upstream_jdomain_instance_t *instance;
-	ngx_uint_t i;
+	ngx_uint_t i, f;
 	ngx_uint_t exists_alt_server;
 	ngx_uint_t naddrs_prev;
 	ngx_http_upstream_server_t *server;
@@ -308,25 +308,26 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 	naddrs_prev = instance->state.data.server->naddrs;
 	instance->state.data.server->naddrs = 0;
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers, marking associated peers up */
+	f = 0;
 	for (i = 0; i < ctx->naddrs; i++) {
 		if (instance->conf.ipver != 0 && ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && addr[i].sockaddr->sa_family != AF_INET) ||
 		                                  (instance->conf.ipver == NGX_JDOMAIN_IPV6 && addr[i].sockaddr->sa_family != AF_INET6))) {
 			continue;
 		}
-		addr[i].sockaddr = &sockaddr[i].sockaddr;
-		addr[i].socklen = peerp[i]->socklen = ctx->addrs[i].socklen;
-		ngx_memcpy(addr[i].sockaddr, ctx->addrs[i].sockaddr, addr[i].socklen);
-		ngx_inet_set_port(addr[i].sockaddr, instance->conf.port);
-		addr[i].name.data = &name[i * NGX_SOCKADDR_STRLEN];
-		addr[i].name.len = peerp[i]->name.len =
-		  ngx_sock_ntop(addr[i].sockaddr, addr[i].socklen, addr[i].name.data, NGX_SOCKADDR_STRLEN, 1);
-		peerp[i]->down = 0;
+		addr[f].sockaddr = &sockaddr[i].sockaddr;
+		addr[f].socklen = peerp[i]->socklen = ctx->addrs[i].socklen;
+		ngx_memcpy(addr[f].sockaddr, ctx->addrs[i].sockaddr, addr[f].socklen);
+		ngx_inet_set_port(addr[f].sockaddr, instance->conf.port);
+		addr[f].name.data = &name[i * NGX_SOCKADDR_STRLEN];
+		addr[f].name.len = peerp[f]->name.len =
+		  ngx_sock_ntop(addr[f].sockaddr, addr[f].socklen, addr[f].name.data, NGX_SOCKADDR_STRLEN, 1);
+		peerp[f]->down = 0;
 		instance->state.data.server->down = 0;
-		instance->state.data.server->naddrs++;
 		if (instance->conf.max_ips == instance->state.data.server->naddrs) {
 			break;
 		}
 	}
+	instance->state.data.server->naddrs = f;
 	instance->state.data.naddrs = instance->state.data.server->naddrs;
 	/* Copy the sockaddr and name of the invalid address (0.0.0.0:0) into the remaining buffers, marking associated peers down */
 	for (i = instance->state.data.naddrs; i < ngx_min(naddrs_prev, instance->conf.max_ips); i++) {
@@ -476,7 +477,7 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 	size_t arglen;
 	ngx_int_t num;
 	ngx_url_t u;
-	ngx_uint_t i;
+	ngx_uint_t i, f;
 	char *rc;
 
 	NGX_JDOMAIN_INVALID_ADDR_SOCKADDR_IN.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -627,23 +628,25 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 	name = instance->state.data.names->elts;
 	sockaddr = instance->state.data.sockaddrs->elts;
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers */
+	f = 0;
 	for (i = 0; i < u.naddrs; i++) {
 		if (instance->conf.ipver != 0 &&
 		    ((instance->conf.ipver == NGX_JDOMAIN_IPV4 && u.addrs[i].sockaddr->sa_family != AF_INET) ||
 		     (instance->conf.ipver == NGX_JDOMAIN_IPV6 && u.addrs[i].sockaddr->sa_family != AF_INET6))) {
 			continue;
 		}
-		addr[i].name.data = &name[i * NGX_SOCKADDR_STRLEN];
-		addr[i].name.len = u.addrs[i].name.len;
-		ngx_memcpy(addr[i].name.data, u.addrs[i].name.data, addr[i].name.len);
-		addr[i].sockaddr = &sockaddr[i].sockaddr;
-		addr[i].socklen = u.addrs[i].socklen;
-		ngx_memcpy(addr[i].sockaddr, u.addrs[i].sockaddr, addr[i].socklen);
-		server->naddrs++;
+		addr[f].name.data = &name[i * NGX_SOCKADDR_STRLEN];
+		addr[f].name.len = u.addrs[i].name.len;
+		ngx_memcpy(addr[f].name.data, u.addrs[i].name.data, addr[f].name.len);
+		addr[f].sockaddr = &sockaddr[i].sockaddr;
+		addr[f].socklen = u.addrs[i].socklen;
+		ngx_memcpy(addr[f].sockaddr, u.addrs[i].sockaddr, addr[f].socklen);
+		f++;
 		if (instance->conf.max_ips == server->naddrs) {
 			break;
 		}
 	}
+	server->naddrs = f;
 	instance->state.data.naddrs = server->naddrs;
 	/* Copy the sockaddr and address name of the invalid address (0.0.0.0:0) into the remaining buffers */
 	for (i = instance->state.data.naddrs; i < instance->conf.max_ips; i++) {
