@@ -325,7 +325,8 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 		  ngx_sock_ntop(addr[f].sockaddr, addr[f].socklen, addr[f].name.data, NGX_SOCKADDR_STRLEN, 1);
 		peerp[f]->down = 0;
 		instance->state.data.server->down = 0;
-		if (instance->conf.max_ips == instance->state.data.server->naddrs) {
+		f++;
+		if (instance->conf.max_ips == f) {
 			break;
 		}
 	}
@@ -645,7 +646,7 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 		addr[f].socklen = u.addrs[i].socklen;
 		ngx_memcpy(addr[f].sockaddr, u.addrs[i].sockaddr, addr[f].socklen);
 		f++;
-		if (instance->conf.max_ips == server->naddrs) {
+		if (instance->conf.max_ips == f) {
 			break;
 		}
 	}
