@@ -11,10 +11,12 @@
 #define NGX_JDOMAIN_DEFAULT_SERVER_WEIGHT 1
 #define NGX_JDOMAIN_DEFAULT_PORT 80
 #define NGX_JDOMAIN_DEFAULT_PORT_LEN 2
+#define NGX_JDOMAIN_DEFAULT_IPVER 0
 
 #define NGX_JDOMAIN_ARG_STR_INTERVAL "interval="
 #define NGX_JDOMAIN_ARG_STR_MAX_IPS "max_ips="
 #define NGX_JDOMAIN_ARG_STR_PORT "port="
+#define NGX_JDOMAIN_ARG_STR_IPVER "ipver="
 #define NGX_JDOMAIN_ARG_STR_STRICT "strict"
 
 typedef struct
@@ -26,6 +28,7 @@ typedef struct
 		ngx_uint_t max_ips;
 		in_port_t port;
 		ngx_uint_t strict;
+		char ipver;
 	} conf;
 	struct
 	{
@@ -297,7 +300,15 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 	naddrs_prev = instance->state.data.server->naddrs;
 	instance->state.data.server->naddrs = 0;
 	/* Copy the resolved sockaddrs and address names (IP:PORT) into our state data buffers, marking associated peers up */
-	for (i = 0; i < ngx_min(ctx->naddrs, instance->conf.max_ips); i++) {
+	for (i = 0; i < ctx->naddrs; i++) {
+		if(	instance->conf.ipver != 0 &&
+			(
+				(instance->conf.ipver == 4 && addr[i].sockaddr->sa_family != AF_INET) ||
+				(instance->conf.ipver == 6 && addr[i].sockaddr->sa_family != AF_INET6)
+			)
+		) {
+			continue;
+		}
 		addr[i].sockaddr = &sockaddr[i].sockaddr;
 		addr[i].socklen = peerp[i]->socklen = ctx->addrs[i].socklen;
 		ngx_memcpy(addr[i].sockaddr, ctx->addrs[i].sockaddr, addr[i].socklen);
@@ -308,6 +319,9 @@ ngx_http_upstream_jdomain_resolve_handler(ngx_resolver_ctx_t *ctx)
 		peerp[i]->down = 0;
 		instance->state.data.server->down = 0;
 		instance->state.data.server->naddrs++;
+		if(instance->conf.max_ips == instance->state.data.server->naddrs) {
+			break;
+		}
 	}
 	instance->state.data.naddrs = instance->state.data.server->naddrs;
 	/* Copy the sockaddr and name of the invalid address (0.0.0.0:0) into the remaining buffers, marking associated peers down */
@@ -372,6 +386,7 @@ ngx_http_upstream_jdomain_create_instance(ngx_conf_t *cf, ngx_http_upstream_jdom
 	instance->conf.interval = 1;
 	instance->conf.max_ips = 4;
 	instance->conf.port = NGX_JDOMAIN_DEFAULT_PORT;
+	instance->conf.ipver = NGX_JDOMAIN_DEFAULT_IPVER;
 
 	instance->state.resolve.status = NGX_JDOMAIN_STATUS_DONE;
 
@@ -546,6 +561,16 @@ ngx_http_upstream_jdomain(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 			}
 			instance->conf.port = num;
 			port_len = value[i].len - arglen;
+			continue;
+		}
+
+		arglen = ngx_strlen(NGX_JDOMAIN_ARG_STR_IPVER);
+		if (ngx_strncmp(value[i].data, NGX_JDOMAIN_ARG_STR_IPVER, arglen) == 0) {
+			num = ngx_atoi(value[i].data + arglen, value[i].len - arglen);
+			if (num != 4 && num != 6 && num != 0) {
+				goto invalid;
+			}
+			instance->conf.ipver = num;
 			continue;
 		}
 
